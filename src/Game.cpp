@@ -1,5 +1,6 @@
 #include "Game.h"
 #include "AssetManager.h"
+#include "Utf.h"
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -47,7 +48,7 @@ void Game::setupMenuTexts()
     m_Title.setPosition(WIN_WIDTH / 2.f, 150.f);
 
     m_Subtitle.setFont(font);
-    m_Subtitle.setString("Курсовой проект на SFML");
+    m_Subtitle.setString(u8("Курсовой проект на SFML"));
     m_Subtitle.setCharacterSize(22);
     m_Subtitle.setFillColor(sf::Color(180, 180, 180));
     auto sb = m_Subtitle.getLocalBounds();
@@ -59,7 +60,7 @@ void Game::setupMenuTexts()
     {
         sf::Text t;
         t.setFont(font);
-        t.setString(m_MenuItems[i]);
+        t.setString(u8(m_MenuItems[i]));
         t.setCharacterSize(34);
         auto lb = t.getLocalBounds();
         t.setOrigin(lb.left + lb.width / 2.f, lb.top + lb.height / 2.f);
@@ -77,7 +78,7 @@ void Game::setupMenuTexts()
     m_Prompt.setFont(font);
     m_Prompt.setCharacterSize(18);
     m_Prompt.setFillColor(sf::Color(200, 200, 200));
-    m_Prompt.setString("Управление: WASD/стрелки — движение, ЛКМ — стрелять, Space/Shift — рывок, Esc — пауза");
+    m_Prompt.setString(u8("Управление: WASD/стрелки — движение, ЛКМ — стрелять, Space/Shift — рывок, Esc — пауза"));
     auto pb = m_Prompt.getLocalBounds();
     m_Prompt.setOrigin(pb.left + pb.width / 2.f, pb.top + pb.height / 2.f);
     m_Prompt.setPosition(WIN_WIDTH / 2.f, 640.f);
@@ -100,7 +101,7 @@ void Game::refreshMenuHighlight()
             m_MenuTexts[i].setStyle(sf::Text::Regular);
         }
     }
-    m_HighScoreMenu.setString("Рекорд: " + std::to_string(m_HighScore));
+    m_HighScoreMenu.setString(u8("Рекорд: " + std::to_string(m_HighScore)));
     auto hb = m_HighScoreMenu.getLocalBounds();
     m_HighScoreMenu.setOrigin(hb.left + hb.width / 2.f, hb.top + hb.height / 2.f);
     m_HighScoreMenu.setPosition(WIN_WIDTH / 2.f, 280.f);
@@ -736,7 +737,7 @@ void Game::drawOverlay(const std::string& title, const std::string& subtitle, sf
 
     sf::Text t;
     t.setFont(font);
-    t.setString(title);
+    t.setString(u8(title));
     t.setCharacterSize(72);
     t.setFillColor(titleColor);
     t.setOutlineColor(sf::Color::Black);
@@ -748,7 +749,7 @@ void Game::drawOverlay(const std::string& title, const std::string& subtitle, sf
 
     sf::Text s;
     s.setFont(font);
-    s.setString(subtitle);
+    s.setString(u8(subtitle));
     s.setCharacterSize(22);
     s.setFillColor(sf::Color(230, 230, 230));
     auto sb = s.getLocalBounds();
@@ -764,7 +765,7 @@ void Game::drawOverlay(const std::string& title, const std::string& subtitle, sf
         {
             sf::Text mi;
             mi.setFont(font);
-            mi.setString(items[i]);
+            mi.setString(u8(items[i]));
             mi.setCharacterSize(28);
             mi.setFillColor(i == m_MenuIndex ? sf::Color(255, 220, 100) : sf::Color(200, 200, 200));
             auto lb = mi.getLocalBounds();

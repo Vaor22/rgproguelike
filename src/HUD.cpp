@@ -1,5 +1,6 @@
 #include "HUD.h"
 #include "AssetManager.h"
+#include "Utf.h"
 
 HUD::HUD()
     : m_MessageTimer(0.f)
@@ -174,7 +175,7 @@ void HUD::draw(sf::RenderWindow& window)
 void HUD::setMessage(const std::string& msg, float duration)
 {
     if (!m_FontReady) return;
-    m_Message.setString(msg);
+    m_Message.setString(u8(msg));
     auto lb = m_Message.getLocalBounds();
     m_Message.setOrigin(lb.left + lb.width / 2.f, 0.f);
     m_Message.setPosition(640.f, 640.f);
