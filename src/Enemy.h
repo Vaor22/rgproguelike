@@ -1,6 +1,7 @@
 #pragma once
 #include "Entity.h"
 #include "Projectile.h"
+#include "Room.h"
 #include <vector>
 
 // Типы врагов
@@ -19,7 +20,7 @@ public:
     Enemy(EnemyType type, float x, float y, int difficulty = 1);
 
     // Обновление поведения (ИИ). Может добавить снаряды в out.
-    void update(float dt, sf::Vector2f playerPos, std::vector<Projectile>& out);
+    void update(float dt, sf::Vector2f playerPos, std::vector<Projectile>& out, const Room& room);
 
     void draw(sf::RenderWindow& window) override;
     sf::FloatRect getBounds() const override;
@@ -33,6 +34,8 @@ public:
 
     // Вспышка урона (после попадания)
     void flashHit();
+
+    float getRadius() const { return m_Radius; }
 
 private:
     EnemyType m_Type;
