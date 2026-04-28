@@ -261,10 +261,10 @@ void Game::updatePlaying(float dt)
         // Удержать в пределах комнаты
         sf::Vector2f p = e->getPosition();
         float margin = 40.f;
-        p.x = std::clamp(p.x, margin,
-                         static_cast<float>(Room::GRID_WIDTH * Room::TILE_SIZE) - margin);
-        p.y = std::clamp(p.y, margin,
-                         static_cast<float>(Room::GRID_HEIGHT * Room::TILE_SIZE) - margin);
+        p.x = std::max(margin, std::min(p.x, 
+         static_cast<float>(Room::GRID_WIDTH * Room::TILE_SIZE) - margin));
+        p.y = std::max(margin, std::min(p.y,
+         static_cast<float>(Room::GRID_HEIGHT * Room::TILE_SIZE) - margin));
         e->setPosition(p);
     }
 
