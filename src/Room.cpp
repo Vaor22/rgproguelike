@@ -146,29 +146,119 @@ sf::Vector2f Room::getCenter() const {
     return { (GRID_WIDTH / 2 + 0.5f) * TILE_SIZE, (GRID_HEIGHT / 2 + 0.5f) * TILE_SIZE };
 }
 
-std::vector<sf::Vector2f> Room::getSpawnPoints(int count, int seed, float entityRadius) const {
+std::vector<sf::Vector2f> Room::getSpawnPoints(int count, int seed, float entityRadius) const
+{
     std::vector<sf::Vector2f> result;
     std::mt19937 rng(seed ^ 0x5A5A);
-    std::uniform_int_distribution<int> xDist(2, GRID_WIDTH - 3);
-    std::uniform_int_distribution<int> yDist(2, GRID_HEIGHT - 3);
+    std::uniform_int_distribution<int> xDist(1, GRID_WIDTH - 2);  // ��������: 1 � -2 ������ 2 � -3
+    std::uniform_int_distribution<int> yDist(1, GRID_HEIGHT - 2); // ��������: 1 � -2 ������ 2 � -3
+
     int attempts = 0;
-    while ((int)result.size() < count && attempts < 400) {
+    while ((int)result.size() < count && attempts < 400)
+    {
         int gx = xDist(rng), gy = yDist(rng);
-        if (m_Grid[gy][gx] == 0) {
-            sf::Vector2f p((gx + 0.5f) * TILE_SIZE, (gy + 0.5f) * TILE_SIZE);
-            if (entityRadius > 0.f) {
-                sf::FloatRect box(p.x - entityRadius, p.y - entityRadius, entityRadius * 2.f, entityRadius * 2.f);
-                if (isRectSolid(box)) continue;
-            }
-            bool ok = true;
-            for (auto& e : result) {
-                float dx = e.x - p.x, dy = e.y - p.y;
-                if (dx * dx + dy * dy < entityRadius * entityRadius * 4.f) { ok = false; break; }
-            }
-            if (ok) result.push_back(p);
+
+        // ���������, ��� ������ - ��� (�� ����� � �� �����)
+        if (m_Grid[gy][gx] != 0)
+        {
+            attempts++;
+            continue;
         }
+
+        sf::Vector2f p((gx + 0.5f) * TILE_SIZE, (gy + 0.5f) * TILE_SIZE);
+
+        // ��������� ��������: ������ ������������� ����� � ��������� ��� ��� ����
+        bool validSpot = true;
+
+        if (entityRadius > 0.f) {
+            // ��������� �� ������ �����, �� � ��� ������ ���� + ����
+            float left = p.x - entityRadius;
+            float right = p.x + entityRadius;
+            float top = p.y - entityRadius;
+            float bottom = p.y + entityRadius;
+
+            // ��������� ����
+            if (isSolid(left, top, false) ||
+                isSolid(right, top, false) ||
+                isSolid(left, bottom, false) ||
+                isSolid(right, bottom, false))
+            {
+                validSpot = false;
+            }
+
+            // �������������� ��������: ����� ������ ������
+            if (validSpot) {
+                for (int dy = -1; dy <= 1; ++dy) {
+                    for (int dx = -1; dx <= 1; ++dx) {
+                        int checkX = gx + dx;
+                        int checkY = gy + dy;
+                        if (checkX >= 0 && checkX < GRID_WIDTH &&
+                            checkY >= 0 && checkY < GRID_HEIGHT) {
+                            if (m_Grid[checkY][checkX] == 1) { // ����� �����
+                                // ���������, �� ������� �� ������
+                                float wallCenterX = (checkX + 0.5f) * TILE_SIZE;
+                                float wallCenterY = (checkY + 0.5f) * TILE_SIZE;
+                                float dxW = p.x - wallCenterX;
+                                float dyW = p.y - wallCenterY;
+                                float distToWall = std::sqrt(dxW * dxW + dyW * dyW);
+                                if (distToWall < entityRadius + TILE_SIZE * 0.3f) {
+                                    validSpot = false;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (!validSpot) break;
+                }
+            }
+        }
+
+        if (!validSpot) {
+            attempts++;
+            continue;
+        }
+
+        // ��������, ����� ����� �� ���������� ������� ������ ���� � �����
+        bool tooClose = false;
+        for (auto& e : result) {
+            float dx = e.x - p.x, dy = e.y - p.y;
+            float minDist = entityRadius * 2.5f; // ��������� � 2.0f �� 2.5f
+            if (dx * dx + dy * dy < minDist * minDist) {
+                tooClose = true;
+                break;
+            }
+        }
+
+        if (tooClose) {
+            attempts++;
+            continue;
+        }
+
+        result.push_back(p);
         attempts++;
     }
+
+    // ���� �� ������� ����� ���������� ����, ���������� fallback - ����� �������
+    if ((int)result.size() < count && count > 0) {
+        sf::Vector2f center = getCenter();
+        bool centerValid = true;
+
+        // ��������� �����
+        float left = center.x - entityRadius;
+        float right = center.x + entityRadius;
+        float top = center.y - entityRadius;
+        float bottom = center.y + entityRadius;
+
+        if (isSolid(left, top, false) || isSolid(right, top, false) ||
+            isSolid(left, bottom, false) || isSolid(right, bottom, false)) {
+            centerValid = false;
+        }
+
+        if (centerValid && result.empty()) {
+            result.push_back(center);
+        }
+    }
+
     return result;
 }
 

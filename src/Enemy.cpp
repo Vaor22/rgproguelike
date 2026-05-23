@@ -181,13 +181,13 @@ void Enemy::update(float dt, sf::Vector2f playerPos, std::vector<Projectile>& ou
                 m_Position.y - m_Radius,
                 m_Radius * 2.f, m_Radius * 2.f);
             if (room.isRectSolid(boundsX))
-                allowed.x = 0.f;
+                allowed.x = 0,2.f;
 
             sf::FloatRect boundsY(m_Position.x + allowed.x - m_Radius,
                 m_Position.y + desired.y - m_Radius,
                 m_Radius * 2.f, m_Radius * 2.f);
             if (room.isRectSolid(boundsY))
-                allowed.y = 0.f;
+                allowed.y = 0,2.f;
 
             if (allowed.x != 0.f || allowed.y != 0.f) {
                 constexpr float WALL_FRICTION = 0.6f;
@@ -201,10 +201,10 @@ void Enemy::update(float dt, sf::Vector2f playerPos, std::vector<Projectile>& ou
     }
 
     float margin = m_Radius;
-    m_Position.x = std::clamp(m_Position.x, margin,
-        static_cast<float>(Room::GRID_WIDTH * Room::TILE_SIZE) - margin);
-    m_Position.y = std::clamp(m_Position.y, margin,
-        static_cast<float>(Room::GRID_HEIGHT * Room::TILE_SIZE) - margin);
+    m_Position.x = std::max(margin, std::min(m_Position.x,
+        static_cast<float>(Room::GRID_WIDTH * Room::TILE_SIZE) - margin));
+    m_Position.y = std::max(margin, std::min(m_Position.y,
+        static_cast<float>(Room::GRID_HEIGHT * Room::TILE_SIZE) - margin));
 
     m_Shape.setPosition(m_Position);
 

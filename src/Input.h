@@ -18,6 +18,8 @@ public:
 
     static sf::Vector2f getMovementDirection();
 
+    
+
 private:
     static void updateKeys();
     static void updateMouse(const sf::RenderWindow& window);
