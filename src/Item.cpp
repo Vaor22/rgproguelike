@@ -27,6 +27,32 @@ Item::Item(ItemType type, sf::Vector2f position, int cost)
     }
 }
 
+Item::Item(const Item& other)
+    : m_Type(other.m_Type)
+    , m_Position(other.m_Position)
+    , m_Collected(other.m_Collected)
+    , m_Cost(other.m_Cost)
+{
+    float size = (m_Type == ItemType::COIN) ? 16.f : 30.f;
+    m_Shape.setSize({ size, size });
+    m_Shape.setOrigin(size / 2.f, size / 2.f);
+    m_Shape.setPosition(m_Position);
+    m_Shape.setFillColor(getColor(m_Type));
+    m_Shape.setOutlineColor(sf::Color::White);
+    m_Shape.setOutlineThickness(1.f);
+
+    if (AssetManager::instance().isFontLoaded())
+    {
+        m_Label.setFont(AssetManager::instance().getFont());
+        m_Label.setString(getLabel(m_Type));
+        m_Label.setCharacterSize(m_Type == ItemType::COIN ? 10 : 16);
+        m_Label.setFillColor(sf::Color::White);
+        auto lb = m_Label.getLocalBounds();
+        m_Label.setOrigin(lb.left + lb.width / 2.f, lb.top + lb.height / 2.f);
+        m_Label.setPosition(m_Position);
+    }
+}
+
 void Item::draw(sf::RenderWindow& window)
 {
     if (m_Collected) return;
@@ -47,39 +73,24 @@ int Item::getCost() const { return m_Cost; }
 
 std::string Item::getDescription(ItemType type)
 {
-    switch (type)
-    {
-    case ItemType::HEALTH:    return "HP +30";
-    case ItemType::DAMAGE_UP: return "DMG +10";
-    case ItemType::SPEED_UP:  return "SPD +50";
-    case ItemType::SHIELD:    return "Shield";
-    case ItemType::COIN:      return "Coin";
-    }
-    return "";
+    static const char* desc[] = { "HP +30", "DMG +10", "SPD +50", "Shield", "Coin" };
+    return desc[static_cast<int>(type)];
 }
 
 sf::Color Item::getColor(ItemType type)
 {
-    switch (type)
-    {
-    case ItemType::HEALTH:    return sf::Color(50, 180, 50);
-    case ItemType::DAMAGE_UP: return sf::Color(200, 50, 50);
-    case ItemType::SPEED_UP:  return sf::Color(50, 100, 220);
-    case ItemType::SHIELD:    return sf::Color(50, 200, 200);
-    case ItemType::COIN:      return sf::Color(240, 200, 40);
-    }
-    return sf::Color::White;
+    static const sf::Color colors[] = {
+        sf::Color(50, 180, 50),   // HEALTH
+        sf::Color(200, 50, 50),   // DAMAGE_UP
+        sf::Color(50, 100, 220),  // SPEED_UP
+        sf::Color(50, 200, 200),  // SHIELD
+        sf::Color(240, 200, 40)   // COIN
+    };
+    return colors[static_cast<int>(type)];
 }
 
 std::string Item::getLabel(ItemType type)
 {
-    switch (type)
-    {
-    case ItemType::HEALTH:    return "+";
-    case ItemType::DAMAGE_UP: return "D";
-    case ItemType::SPEED_UP:  return "S";
-    case ItemType::SHIELD:    return "O";
-    case ItemType::COIN:      return "$";
-    }
-    return "?";
+    static const char* labels[] = { "+", "D", "S", "O", "$" };
+    return labels[static_cast<int>(type)];
 }
