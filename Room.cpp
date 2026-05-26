@@ -60,6 +60,7 @@ void Room::buildVisuals() {
     case RoomType::BOSS:  floorA = sf::Color(100, 60, 60); floorB = sf::Color(120, 75, 75); break;
     default: break;
     }
+    m_Tiles.reserve(GRID_WIDTH * GRID_HEIGHT);
     for (int y = 0; y < GRID_HEIGHT; ++y) {
         for (int x = 0; x < GRID_WIDTH; ++x) {
             sf::RectangleShape tile({ (float)TILE_SIZE, (float)TILE_SIZE });
@@ -146,29 +147,87 @@ sf::Vector2f Room::getCenter() const {
     return { (GRID_WIDTH / 2 + 0.5f) * TILE_SIZE, (GRID_HEIGHT / 2 + 0.5f) * TILE_SIZE };
 }
 
-std::vector<sf::Vector2f> Room::getSpawnPoints(int count, int seed, float entityRadius) const {
+std::vector<sf::Vector2f> Room::getSpawnPoints(int count, int seed, float entityRadius) const
+{
+    if (count <= 0) return {};
+
     std::vector<sf::Vector2f> result;
+    result.reserve(count);
+
     std::mt19937 rng(seed ^ 0x5A5A);
-    std::uniform_int_distribution<int> xDist(2, GRID_WIDTH - 3);
-    std::uniform_int_distribution<int> yDist(2, GRID_HEIGHT - 3);
+    std::uniform_int_distribution<int> xDist(1, GRID_WIDTH - 2);
+    std::uniform_int_distribution<int> yDist(1, GRID_HEIGHT - 2);
+
+    const float radiusSq = entityRadius * entityRadius;
+    const float minDistSq = radiusSq * 6.25f;
+
     int attempts = 0;
-    while ((int)result.size() < count && attempts < 400) {
+    const int MAX_ATTEMPTS = 400;
+
+    while ((int)result.size() < count && attempts < MAX_ATTEMPTS)
+    {
         int gx = xDist(rng), gy = yDist(rng);
-        if (m_Grid[gy][gx] == 0) {
-            sf::Vector2f p((gx + 0.5f) * TILE_SIZE, (gy + 0.5f) * TILE_SIZE);
-            if (entityRadius > 0.f) {
-                sf::FloatRect box(p.x - entityRadius, p.y - entityRadius, entityRadius * 2.f, entityRadius * 2.f);
-                if (isRectSolid(box)) continue;
+
+        if (m_Grid[gy][gx] != 0)
+        {
+            attempts++;
+            continue;
+        }
+
+        sf::Vector2f p((gx + 0.5f) * TILE_SIZE, (gy + 0.5f) * TILE_SIZE);
+        bool validSpot = true;
+
+        if (entityRadius > 0.f) {
+            float left = p.x - entityRadius, right = p.x + entityRadius;
+            float top = p.y - entityRadius, bottom = p.y + entityRadius;
+
+            if (isSolid(left, top, false) || isSolid(right, top, false) ||
+                isSolid(left, bottom, false) || isSolid(right, bottom, false))
+            {
+                validSpot = false;
             }
-            bool ok = true;
+            else {
+                for (int dy = -1; dy <= 1 && validSpot; ++dy) {
+                    for (int dx = -1; dx <= 1; ++dx) {
+                        int checkX = gx + dx, checkY = gy + dy;
+                        if (checkX >= 0 && checkX < GRID_WIDTH &&
+                            checkY >= 0 && checkY < GRID_HEIGHT &&
+                            m_Grid[checkY][checkX] == 1)
+                        {
+                            float dxW = p.x - (checkX + 0.5f) * TILE_SIZE;
+                            float dyW = p.y - (checkY + 0.5f) * TILE_SIZE;
+                            if (dxW * dxW + dyW * dyW < radiusSq + 0.09f * TILE_SIZE * TILE_SIZE) {
+                                validSpot = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (validSpot) {
+            bool tooClose = false;
             for (auto& e : result) {
                 float dx = e.x - p.x, dy = e.y - p.y;
-                if (dx * dx + dy * dy < entityRadius * entityRadius * 4.f) { ok = false; break; }
+                if (dx * dx + dy * dy < minDistSq) {
+                    tooClose = true;
+                    break;
+                }
             }
-            if (ok) result.push_back(p);
+
+            if (!tooClose) {
+                result.push_back(p);
+                continue;
+            }
         }
         attempts++;
     }
+
+    if (result.empty() && count > 0) {
+        result.push_back(getCenter());
+    }
+
     return result;
 }
 
