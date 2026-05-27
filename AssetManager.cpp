@@ -130,19 +130,12 @@ bool AssetManager::hasTexture(const std::string& name) const {
 void AssetManager::loadGameTextures() {
     // Стены
     loadTexture("wall_1", "assets/Brick_Wall_1.png");
-    loadTexture("wall_2", "assets/Brick_Wall_2.png");
-    loadTexture("wall_3", "assets/Brick_Wall_3.png");
-    loadTexture("wall_4", "assets/Brick_Wall_4.png");
-    loadTexture("wall_5", "assets/Brick_Wall_5.png");
-    loadTexture("wall_6", "assets/Brick_Wall_6.png");
-    loadTexture("wall_7", "assets/Brick_Wall_7.png");
-    loadTexture("wall_8", "assets/Brick_Wall_8.png");
-    loadTexture("wall_9", "assets/Brick_Wall_9.png");
-    loadTexture("wall_10", "assets/Brick_Wall_10.png");
-    loadTexture("wall_11", "assets/Brick_Wall_11.png");
-    loadTexture("wall_12", "assets/Brick_Wall_12.png");
-    loadTexture("wall_13", "assets/Brick_Wall_13.png");
-    loadTexture("wall_14", "assets/Brick_Wall_14.png");
+    loadTexture("vert", "assets/vert.png");
+    loadTexture("rightUp", "assets/rightUp.png");
+    loadTexture("rightDown", "assets/rightDown.png");
+    loadTexture("leftUp", "assets/leftUp.png");
+    loadTexture("leftDown", "assets/leftDown.png");
+    loadTexture("horizont", "assets/horizont.png");
 
     // Пол
     loadTexture("floor", "assets/Wooden_Floor.png");

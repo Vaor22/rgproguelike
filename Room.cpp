@@ -1,4 +1,5 @@
 #include "Room.h"
+#include "AssetManager.h"
 #include <random>
 #include <cmath>
 
@@ -12,10 +13,12 @@ void Room::generate(RoomType type, const std::array<bool, 4>& doors, int seed) {
     m_Doors = doors;
     m_Locked = false;
 
+    // Очистка сетки
     for (int y = 0; y < GRID_HEIGHT; ++y)
         for (int x = 0; x < GRID_WIDTH; ++x)
             m_Grid[y][x] = 0;
 
+    // Внешние стены
     for (int x = 0; x < GRID_WIDTH; ++x) {
         m_Grid[0][x] = 1;
         m_Grid[GRID_HEIGHT - 1][x] = 1;
@@ -26,7 +29,8 @@ void Room::generate(RoomType type, const std::array<bool, 4>& doors, int seed) {
     }
 
     placeDoors();
-    if (type == RoomType::NORMAL || type == RoomType::BOSS) placeObstacles(seed);
+    if (type == RoomType::NORMAL || type == RoomType::BOSS)
+        placeObstacles(seed);
     buildVisuals();
 }
 
@@ -51,44 +55,77 @@ void Room::placeObstacles(int seed) {
 }
 
 void Room::buildVisuals() {
-    m_Tiles.clear();
-    sf::Color floorA(122, 95, 70), floorB(138, 108, 80);
-    switch (m_Type) {
-    case RoomType::START: floorA = sf::Color(100, 130, 90); floorB = sf::Color(115, 145, 105); break;
-    case RoomType::ITEM:  floorA = sf::Color(130, 125, 90); floorB = sf::Color(150, 145, 105); break;
-    case RoomType::SHOP:  floorA = sf::Color(130, 105, 140); floorB = sf::Color(150, 120, 160); break;
-    case RoomType::BOSS:  floorA = sf::Color(100, 60, 60); floorB = sf::Color(120, 75, 75); break;
-    default: break;
-    }
-    m_Tiles.reserve(GRID_WIDTH * GRID_HEIGHT);
+    m_TileSprites.clear();
+
+    // Получаем текстуры
+    const sf::Texture* texWall = AssetManager::instance().getTexture("wall_1");
+    const sf::Texture* texHoriz = AssetManager::instance().getTexture("horizont");
+    const sf::Texture* texVert = AssetManager::instance().getTexture("vert");
+    const sf::Texture* texLeftUp = AssetManager::instance().getTexture("leftUp");
+    const sf::Texture* texRightUp = AssetManager::instance().getTexture("rightUp");
+    const sf::Texture* texLeftDown = AssetManager::instance().getTexture("leftDown");
+    const sf::Texture* texRightDown = AssetManager::instance().getTexture("rightDown");
+    const sf::Texture* texFloor = AssetManager::instance().getTexture("floor");
+
+    // Функция масштабирования текстуры под TILE_SIZE (80x80)
+    auto makeSprite = [](const sf::Texture* tex, float x, float y) -> sf::Sprite {
+        sf::Sprite spr;
+        if (!tex) return spr;
+        spr.setTexture(*tex);
+        sf::Vector2u sz = tex->getSize();
+        if (sz.x != TILE_SIZE || sz.y != TILE_SIZE) {
+            float sx = static_cast<float>(TILE_SIZE) / sz.x;
+            float sy = static_cast<float>(TILE_SIZE) / sz.y;
+            spr.setScale(sx, sy);
+        }
+        spr.setPosition(x, y);
+        return spr;
+        };
+
+    // Проходим по всем клеткам
     for (int y = 0; y < GRID_HEIGHT; ++y) {
         for (int x = 0; x < GRID_WIDTH; ++x) {
-            sf::RectangleShape tile({ (float)TILE_SIZE, (float)TILE_SIZE });
-            tile.setPosition((float)(x * TILE_SIZE), (float)(y * TILE_SIZE));
-            if (m_Grid[y][x] == 1) {
-                tile.setFillColor(sf::Color(55, 55, 62));
-                tile.setOutlineColor(sf::Color(30, 30, 36));
-                tile.setOutlineThickness(1.f);
+            int cell = m_Grid[y][x];
+            float posX = static_cast<float>(x * TILE_SIZE);
+            float posY = static_cast<float>(y * TILE_SIZE);
+
+            if (cell == 0) { // Пол
+                if (texFloor)
+                    m_TileSprites.push_back(makeSprite(texFloor, posX, posY));
             }
-            else if (m_Grid[y][x] == 2) {
-                tile.setFillColor(m_Locked ? sf::Color(120, 40, 40) : sf::Color(205, 170, 110));
-                tile.setOutlineColor(sf::Color(80, 60, 30));
-                tile.setOutlineThickness(1.f);
+            else if (cell == 1) { // Стена
+                const sf::Texture* tex = nullptr;
+                bool isTop = (y == 0);
+                bool isBottom = (y == GRID_HEIGHT - 1);
+                bool isLeft = (x == 0);
+                bool isRight = (x == GRID_WIDTH - 1);
+
+                if (isTop && isLeft) tex = texLeftUp;
+                else if (isTop && isRight) tex = texRightUp;
+                else if (isBottom && isLeft) tex = texLeftDown;
+                else if (isBottom && isRight) tex = texRightDown;
+                else if (isTop || isBottom) tex = texHoriz;
+                else if (isLeft || isRight) tex = texVert;
+                else tex = texWall;
+
+                if (tex)
+                    m_TileSprites.push_back(makeSprite(tex, posX, posY));
             }
-            else {
-                tile.setFillColor(((x + y) % 2 == 0) ? floorA : floorB);
-            }
-            m_Tiles.push_back(tile);
+            // cell == 2 (дверь) – не рисуем ничего
         }
     }
 }
 
 void Room::setDoorsLocked(bool locked) {
-    if (m_Locked != locked) { m_Locked = locked; buildVisuals(); }
+    if (m_Locked != locked) {
+        m_Locked = locked;
+        // Визуально ничего не меняем, т.к. двери не рисуются
+    }
 }
 
 void Room::draw(sf::RenderWindow& window) {
-    for (auto& tile : m_Tiles) window.draw(tile);
+    for (auto& sprite : m_TileSprites)
+        window.draw(sprite);
 }
 
 bool Room::isSolid(float x, float y, bool ignoreDoors) const {
@@ -103,10 +140,10 @@ bool Room::isSolid(float x, float y, bool ignoreDoors) const {
 }
 
 bool Room::isRectSolid(const sf::FloatRect& rect) const {
-    int left = std::max(0, (int)(rect.left / TILE_SIZE));
-    int top = std::max(0, (int)(rect.top / TILE_SIZE));
-    int right = std::min(GRID_WIDTH - 1, (int)((rect.left + rect.width) / TILE_SIZE));
-    int bottom = std::min(GRID_HEIGHT - 1, (int)((rect.top + rect.height) / TILE_SIZE));
+    int left = std::max(0, static_cast<int>(rect.left / TILE_SIZE));
+    int top = std::max(0, static_cast<int>(rect.top / TILE_SIZE));
+    int right = std::min(GRID_WIDTH - 1, static_cast<int>((rect.left + rect.width) / TILE_SIZE));
+    int bottom = std::min(GRID_HEIGHT - 1, static_cast<int>((rect.top + rect.height) / TILE_SIZE));
     for (int y = top; y <= bottom; ++y)
         for (int x = left; x <= right; ++x) {
             int cell = m_Grid[y][x];
@@ -121,12 +158,16 @@ bool Room::isAtDoor(const sf::FloatRect& bounds, Direction dir) const {
     float cx = bounds.left + bounds.width / 2.f;
     float cy = bounds.top + bounds.height / 2.f;
     int doorX = GRID_WIDTH / 2, doorY = GRID_HEIGHT / 2;
-    const float edge = (float)TILE_SIZE * 0.4f;
+    const float edge = static_cast<float>(TILE_SIZE) * 0.4f;
     switch (dir) {
-    case Direction::NORTH: return cy < edge && std::abs(cx - (doorX + 0.5f) * TILE_SIZE) < TILE_SIZE * 0.55f;
-    case Direction::SOUTH: return cy > GRID_HEIGHT * TILE_SIZE - edge && std::abs(cx - (doorX + 0.5f) * TILE_SIZE) < TILE_SIZE * 0.55f;
-    case Direction::WEST:  return cx < edge && std::abs(cy - (doorY + 0.5f) * TILE_SIZE) < TILE_SIZE * 0.55f;
-    case Direction::EAST:  return cx > GRID_WIDTH * TILE_SIZE - edge && std::abs(cy - (doorY + 0.5f) * TILE_SIZE) < TILE_SIZE * 0.55f;
+    case Direction::NORTH:
+        return cy < edge && std::abs(cx - (doorX + 0.5f) * TILE_SIZE) < TILE_SIZE * 0.55f;
+    case Direction::SOUTH:
+        return cy > GRID_HEIGHT * TILE_SIZE - edge && std::abs(cx - (doorX + 0.5f) * TILE_SIZE) < TILE_SIZE * 0.55f;
+    case Direction::WEST:
+        return cx < edge && std::abs(cy - (doorY + 0.5f) * TILE_SIZE) < TILE_SIZE * 0.55f;
+    case Direction::EAST:
+        return cx > GRID_WIDTH * TILE_SIZE - edge && std::abs(cy - (doorY + 0.5f) * TILE_SIZE) < TILE_SIZE * 0.55f;
     }
     return false;
 }
@@ -135,10 +176,10 @@ sf::Vector2f Room::getEntryPosition(Direction fromDir) const {
     float cx = (GRID_WIDTH / 2 + 0.5f) * TILE_SIZE;
     float cy = (GRID_HEIGHT / 2 + 0.5f) * TILE_SIZE;
     switch (fromDir) {
-    case Direction::NORTH: return { cx, (float)TILE_SIZE * 1.5f };
-    case Direction::SOUTH: return { cx, (float)(GRID_HEIGHT - 2) * TILE_SIZE + TILE_SIZE / 2.f };
-    case Direction::WEST:  return { (float)TILE_SIZE * 1.5f, cy };
-    case Direction::EAST:  return { (float)(GRID_WIDTH - 2) * TILE_SIZE + TILE_SIZE / 2.f, cy };
+    case Direction::NORTH: return { cx, static_cast<float>(TILE_SIZE) * 1.5f };
+    case Direction::SOUTH: return { cx, static_cast<float>((GRID_HEIGHT - 2) * TILE_SIZE) + TILE_SIZE / 2.f };
+    case Direction::WEST:  return { static_cast<float>(TILE_SIZE) * 1.5f, cy };
+    case Direction::EAST:  return { static_cast<float>((GRID_WIDTH - 2) * TILE_SIZE) + TILE_SIZE / 2.f, cy };
     }
     return { cx, cy };
 }
@@ -147,8 +188,41 @@ sf::Vector2f Room::getCenter() const {
     return { (GRID_WIDTH / 2 + 0.5f) * TILE_SIZE, (GRID_HEIGHT / 2 + 0.5f) * TILE_SIZE };
 }
 
-std::vector<sf::Vector2f> Room::getSpawnPoints(int count, int seed, float entityRadius) const
-{
+bool Room::isAreaFree(sf::Vector2f pos, float radius) const {
+    sf::FloatRect area(pos.x - radius, pos.y - radius, radius * 2, radius * 2);
+    return !isRectSolid(area);
+}
+
+sf::Vector2f Room::getSafeSpawnPosition(float entityRadius, int maxAttempts) const {
+    sf::Vector2f center = getCenter();
+    if (isAreaFree(center, entityRadius)) {
+        return center;
+    }
+
+    const float offsets[] = { -60.f, -40.f, -20.f, 0.f, 20.f, 40.f, 60.f };
+    for (int attempt = 0; attempt < maxAttempts; ++attempt) {
+        for (float dx : offsets) {
+            for (float dy : offsets) {
+                sf::Vector2f pos(center.x + dx, center.y + dy);
+                if (isAreaFree(pos, entityRadius)) {
+                    return pos;
+                }
+            }
+        }
+        for (float r = 80.f; r <= 220.f; r += 40.f) {
+            for (float angle = 0; angle < 360; angle += 45) {
+                float rad = angle * 3.14159f / 180.f;
+                sf::Vector2f pos(center.x + r * cos(rad), center.y + r * sin(rad));
+                if (isAreaFree(pos, entityRadius)) {
+                    return pos;
+                }
+            }
+        }
+    }
+    return center; // fallback
+}
+
+std::vector<sf::Vector2f> Room::getSpawnPoints(int count, int seed, float entityRadius) const {
     if (count <= 0) return {};
 
     std::vector<sf::Vector2f> result;
@@ -158,64 +232,22 @@ std::vector<sf::Vector2f> Room::getSpawnPoints(int count, int seed, float entity
     std::uniform_int_distribution<int> xDist(1, GRID_WIDTH - 2);
     std::uniform_int_distribution<int> yDist(1, GRID_HEIGHT - 2);
 
-    const float radiusSq = entityRadius * entityRadius;
-    const float minDistSq = radiusSq * 6.25f;
-
+    const float minDistSq = (entityRadius * 2.5f) * (entityRadius * 2.5f);
     int attempts = 0;
-    const int MAX_ATTEMPTS = 400;
+    const int MAX_ATTEMPTS = 800;
 
-    while ((int)result.size() < count && attempts < MAX_ATTEMPTS)
-    {
+    while ((int)result.size() < count && attempts < MAX_ATTEMPTS) {
         int gx = xDist(rng), gy = yDist(rng);
-
-        if (m_Grid[gy][gx] != 0)
-        {
-            attempts++;
-            continue;
-        }
-
         sf::Vector2f p((gx + 0.5f) * TILE_SIZE, (gy + 0.5f) * TILE_SIZE);
-        bool validSpot = true;
-
-        if (entityRadius > 0.f) {
-            float left = p.x - entityRadius, right = p.x + entityRadius;
-            float top = p.y - entityRadius, bottom = p.y + entityRadius;
-
-            if (isSolid(left, top, false) || isSolid(right, top, false) ||
-                isSolid(left, bottom, false) || isSolid(right, bottom, false))
-            {
-                validSpot = false;
-            }
-            else {
-                for (int dy = -1; dy <= 1 && validSpot; ++dy) {
-                    for (int dx = -1; dx <= 1; ++dx) {
-                        int checkX = gx + dx, checkY = gy + dy;
-                        if (checkX >= 0 && checkX < GRID_WIDTH &&
-                            checkY >= 0 && checkY < GRID_HEIGHT &&
-                            m_Grid[checkY][checkX] == 1)
-                        {
-                            float dxW = p.x - (checkX + 0.5f) * TILE_SIZE;
-                            float dyW = p.y - (checkY + 0.5f) * TILE_SIZE;
-                            if (dxW * dxW + dyW * dyW < radiusSq + 0.09f * TILE_SIZE * TILE_SIZE) {
-                                validSpot = false;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if (validSpot) {
+        if (isAreaFree(p, entityRadius)) {
             bool tooClose = false;
-            for (auto& e : result) {
-                float dx = e.x - p.x, dy = e.y - p.y;
+            for (auto& existing : result) {
+                float dx = existing.x - p.x, dy = existing.y - p.y;
                 if (dx * dx + dy * dy < minDistSq) {
                     tooClose = true;
                     break;
                 }
             }
-
             if (!tooClose) {
                 result.push_back(p);
                 continue;
@@ -225,9 +257,8 @@ std::vector<sf::Vector2f> Room::getSpawnPoints(int count, int seed, float entity
     }
 
     if (result.empty() && count > 0) {
-        result.push_back(getCenter());
+        result.push_back(getSafeSpawnPosition(entityRadius));
     }
-
     return result;
 }
 

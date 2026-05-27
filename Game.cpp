@@ -349,6 +349,13 @@ void Game::updatePlaying(float dt)
                 || p.getPosition().y < -50.f || p.getPosition().y > Room::GRID_HEIGHT * Room::TILE_SIZE + 50.f;
         }), m_Projectiles.end());
 
+    // Анимация предметов (монетки вращаются и подпрыгивают)
+    for (auto& wi : m_WorldItems) {
+        if (wi.roomIndex == currentRoomIdx && !wi.collected) {
+            wi.item.updateAnimation(dtClamped);
+        }
+    }
+
     // Контактный урон
     if (m_Player.isAlive())
     {
@@ -425,7 +432,7 @@ void Game::updatePlaying(float dt)
         }
     }
 
-    // Обновление и показ улучшений (только если комната очищена – вызов из onRoomCleared)
+    // Обновление и показ улучшений
     m_UpgradeUI.update(dtClamped);
     if (m_UpgradeUI.isActive())
     {
@@ -435,7 +442,7 @@ void Game::updatePlaying(float dt)
             m_Player.applyUpgrade(selected);
             m_Player.getExpSystem().clearOnePendingUpgrade();
             m_HUD.setMessage("✦ " + Upgrade::getInfo(selected).name + " ✦", 2.5f);
-            checkAndShowUpgradeUI(); // показать следующее, если есть
+            checkAndShowUpgradeUI();
         }
     }
 
@@ -486,7 +493,6 @@ void Game::checkRoomTransitions()
                 loadCurrentRoom();
                 sf::Vector2f entryPos = m_Room.getEntryPosition(fromDir);
                 m_Player.setPosition(entryPos);
-                // Не сбрасываем портал, он остаётся в комнате босса
                 break;
             }
         }
@@ -596,10 +602,9 @@ void Game::spawnRoomContent()
     }
     else if (type == RoomType::BOSS && !m_Level.getCurrentNode().cleared)
     {
-        // ИСПРАВЛЕНИЕ: используем getSpawnPoints для безопасной позиции босса
         unsigned int bossSeed = static_cast<unsigned int>(m_Level.getCurrentRoomIndex() * 131 + m_Level.getFloorNumber() * 977 + 42);
-        auto points = m_Room.getSpawnPoints(1, bossSeed, 42.f);
-        sf::Vector2f bossPos = points.empty() ? m_Room.getCenter() : points[0];
+        // Используем улучшенный метод, который гарантирует безопасную позицию
+        sf::Vector2f bossPos = m_Room.getSafeSpawnPosition(42.f, 20);
         m_Enemies.push_back(std::make_unique<Enemy>(EnemyType::BOSS, bossPos.x, bossPos.y, floor));
     }
     else if (type == RoomType::ITEM && !m_Level.getCurrentNode().cleared)
@@ -645,7 +650,6 @@ void Game::onRoomCleared()
         m_HUD.setMessage("Room cleared (+50)", 1.2f);
     }
 
-    // После очистки комнаты проверяем, есть ли накопленные улучшения
     checkAndShowUpgradeUI();
 }
 
@@ -757,7 +761,6 @@ void Game::showUpgradeUI()
 
 void Game::checkAndShowUpgradeUI()
 {
-    // Показываем окно улучшений только в состоянии PLAYING, комната очищена и игрок жив
     if (m_State != GameState::PLAYING) return;
     if (!m_Level.getCurrentNode().cleared) return;
     if (!m_Player.isAlive()) return;
