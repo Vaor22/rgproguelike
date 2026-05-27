@@ -1,8 +1,8 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <string>
+#include <unordered_map>
 
-// Singleton: загрузка и хранение общих ресурсов (шрифты)
 class AssetManager
 {
 public:
@@ -10,6 +10,13 @@ public:
 
     const sf::Font& getFont() const;
     bool isFontLoaded() const;
+
+    // Новые методы для текстур
+    bool loadTexture(const std::string& name, const std::string& path);
+    const sf::Texture* getTexture(const std::string& name) const;
+    bool hasTexture(const std::string& name) const;
+
+    void loadGameTextures(); // загрузка всех игровых текстур
 
 private:
     AssetManager();
@@ -20,4 +27,6 @@ private:
 
     sf::Font m_Font;
     bool m_FontLoaded;
+
+    std::unordered_map<std::string, sf::Texture> m_Textures;
 };
