@@ -18,6 +18,13 @@ public:
 
     static sf::Vector2f getMovementDirection();
 
+    // Helper methods for rebindable actions
+    static bool isDashPressed();
+    static bool isInteractPressed();
+    static bool isInteractJustPressed();
+    static bool isPausePressed();
+    static bool isShootPressed();
+
 private:
     static void updateKeys();
     static void updateMouse(const sf::RenderWindow& window);

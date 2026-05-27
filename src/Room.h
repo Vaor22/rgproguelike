@@ -26,6 +26,10 @@ public:
     sf::Vector2f getCenter() const;
     std::vector<sf::Vector2f> getSpawnPoints(int count, int seed, float entityRadius = 0.f) const;
 
+    // Новые методы для безопасного спавна
+    sf::Vector2f getSafeSpawnPosition(float entityRadius, int maxAttempts = 10) const;
+    bool isAreaFree(sf::Vector2f pos, float radius) const;
+
     RoomType getType() const;
     bool hasDoor(Direction d) const;
     bool isDoorsLocked() const;
@@ -35,8 +39,7 @@ private:
     std::array<bool, 4> m_Doors;
     RoomType m_Type;
     bool m_Locked;
-    std::vector<sf::RectangleShape> m_Tiles;
-    std::vector<sf::RectangleShape> m_Decorations;
+    std::vector<sf::Sprite> m_TileSprites;   // замените m_Tiles на m_TileSprites
 
     void buildVisuals();
     void placeDoors();
